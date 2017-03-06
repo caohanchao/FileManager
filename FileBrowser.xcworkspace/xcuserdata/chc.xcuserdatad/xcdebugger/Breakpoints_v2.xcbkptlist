@@ -2,4 +2,54 @@
 <Bucket
    type = "0"
    version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "FileBrowser/FileSelectControler/CJFileManagerVC.m"
+            timestampString = "510485736.973523"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "496"
+            endingLineNumber = "496"
+            landmarkName = "-setOrigArray"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[CJFileManagerVC setOrigArray]"
+                  moduleName = "FileBrowser"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chc/Desktop/MyCode/FileManager/FileBrowser/FileSelectControler/CJFileManagerVC.m"
+                  timestampString = "510484244.098642"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "469"
+                  endingLineNumber = "469"
+                  offsetFromSymbolStart = "64">
+               </Location>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[CJFileManagerVC setOrigArray]"
+                  moduleName = "FileBrowser"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/chc/Desktop/MyCode/FileManager/FileBrowser/FileSelectControler/CJFileManagerVC.m"
+                  timestampString = "510484244.100405"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "469"
+                  endingLineNumber = "469"
+                  offsetFromSymbolStart = "84">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
 </Bucket>

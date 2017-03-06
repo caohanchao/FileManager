@@ -5,4 +5,5 @@ pod 'Masonry', '~> 0.6.3'
 pod 'SDWebImage', '~> 3.7.3'
 pod 'AFNetworking', '~> 3.0'
 target ’FileBrowser‘ do
+    pod 'MJExtension', '~> 3.0.10'
 end

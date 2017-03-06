@@ -41,6 +41,7 @@ typedef NS_ENUM(NSInteger, MKFileType) {
 @property (copy, nonatomic) NSString *fileSize;
 @property (nonatomic, assign) CGFloat fileSizefloat;
 
+@property (copy,nonatomic) NSData *fileData;
 @property (copy, nonatomic) NSString *creatTime;
 
 //图标
@@ -48,6 +49,7 @@ typedef NS_ENUM(NSInteger, MKFileType) {
 
 @property (assign, nonatomic) MKFileType fileType;
 @property (nonatomic,assign) BOOL select;//是否被选中
+
 //
 ///**
 // *  获取路径下所有某类型的文件

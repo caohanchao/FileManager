@@ -144,13 +144,25 @@
 }
 
 - (void)replaceDeparmentTitleArrWithNewArr:(NSArray *)arr {
+    
     if (arr.count == self.departmentArr.count) {
         for (int i = 0; i < self.btnArr.count; ++i) {
             NSString *title = arr[i];
             UIButton *btn = self.btnArr[i];
             [btn setTitle:title forState:UIControlStateNormal];
             [btn setTitle:title forState:UIControlStateSelected];
+            if (i == 0) {
+                self.selectedIndex = 0;
+                btn.selected = YES;
+            }
+            else {
+                btn.selected = NO;
+            }
             
+        }
+        
+        if ([self.cj_delegate respondsToSelector:@selector(didScrollToIndex:withSelectMode:)]) {
+            [self.cj_delegate didScrollToIndex:self.selectedIndex withSelectMode:self.selectMode];
         }
     }
 }

@@ -5,6 +5,7 @@
 //  Created by Vieene on 2016/10/13.
 //  Copyright © 2016年 Vieene. All rights reserved.
 //
+#import <Photos/Photos.h>
 
 //文件默认存储的路径
 #define HomeFilePath [[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:@"CJFileCache1"]
@@ -20,6 +21,9 @@
 #import "CJFlieLookUpVC.h"
 #import "UIView+CJToast.h"
 #import "UIColor+CJColorCategory.h"
+#import "CJFileObjModel.h"
+#import <MJExtension.h>
+#import <AssetsLibrary/AssetsLibrary.h>
 
 CGFloat departmentH = 48;
 CGFloat toolBarHeight = 49;
@@ -40,10 +44,26 @@ CGFloat toolBarHeight = 49;
 
 @property (nonatomic,assign) SelectFileMode mode;
 
+@property (nonatomic,strong) NSMutableArray *recentTimeSource;
+
+@property (nonatomic,strong) NSMutableArray *videoArray;
 
 @end
 
 @implementation CJFileManagerVC
+
+- (NSMutableArray *)recentTimeSource {
+    if (!_recentTimeSource ) {
+        _recentTimeSource = [NSMutableArray array];
+    }return _recentTimeSource;
+}
+
+- (NSMutableArray *)videoArray {
+    if (!_videoArray) {
+        _videoArray = [NSMutableArray array];
+    }return _videoArray;
+}
+
 + (void)initialize
 {
     [self getHomeFilePath];
@@ -57,20 +77,89 @@ CGFloat toolBarHeight = 49;
     self.automaticallyAdjustsScrollViewInsets = NO;
     [self initNAV];
     
+    [self loadData];
+    [self loadVideo];
     [self setClickPartmentView];
     [self setupToolbar];
+}
+
+- (void)loadVideo {
+    
+    PHAuthorizationStatus author = [PHPhotoLibrary authorizationStatus];
+    if (author == PHAuthorizationStatusRestricted || author ==PHAuthorizationStatusDenied) {
+        //无权限
+        
+    }
+    else {
+        
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            //这里用PHAsset来获取视频数据 ALAsset显得很无力了。。。
+            PHFetchResult *voideResult = [PHAsset fetchAssetsWithMediaType:PHAssetMediaTypeVideo options:nil];
+            PHImageManager *manager = [PHImageManager defaultManager];
+            // 视频请求对象
+            PHVideoRequestOptions *options = [PHVideoRequestOptions new];
+            options.deliveryMode = PHVideoRequestOptionsDeliveryModeHighQualityFormat;
+            [voideResult enumerateObjectsUsingBlock:^(PHAsset *obj, NSUInteger idx, BOOL *stop) {
+                NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+                [dateFormatter setDateFormat:@"YY-MM-dd HH:mm:ss"];
+                CJFileObjModel *model = [CJFileObjModel new];
+                model.creatTime = [dateFormatter stringFromDate:obj.creationDate];
+                
+                [manager requestImageForAsset:obj targetSize:CGSizeMake(80, 80) contentMode:PHImageContentModeAspectFill options:nil resultHandler:^(UIImage * _Nullable result, NSDictionary * _Nullable info) {
+                    model.image = result;
+                }];
+                [manager requestAVAssetForVideo:obj options:options resultHandler:^(AVAsset * asset, AVAudioMix * audioMix, NSDictionary * info) {
+                    
+                    NSArray *tracks = asset.tracks;
+//                    float estimatedSize = 0.0 ;
+                    for (AVAssetTrack * track in tracks) {
+                        float rate = ([track estimatedDataRate] / 8); // convert bits per second to bytes per second
+                        float seconds = CMTimeGetSeconds([track timeRange].duration);
+                        model.fileSizefloat += seconds * rate;
+                    }
+                    
+                    model.fileSize = [NSString stringWithFormat:@"%.2lfM",model.fileSizefloat / 1000 / 1000];
+                    
+                    model.name = [asset mj_keyValues][@"propertyListForProxy"][@"name"];
+                    //                model.fileSize = [[asset mj_keyValues][@"propertyListForProxy"][@"moop"] length];
+                    model.fileData = [asset mj_keyValues][@"propertyListForProxy"][@"moop"];
+                    [self.videoArray addObject:model];
+                }];
+                
+                
+                
+            }];
+            
+//            dispatch_async(dispatch_get_main_queue(), ^{
+//                
+//                NSArray *results =[self.videoArray sortedArrayUsingComparator:^NSComparisonResult(id  _Nonnull obj1, id  _Nonnull obj2) {
+//                    CJFileObjModel *model1 = obj1;
+//                    CJFileObjModel *model2 = obj2;
+//                    NSComparisonResult result = [model1.creatTime compare:model2.creatTime];
+//                    return result == NSOrderedAscending;
+//                }];
+//                [self.videoArray removeAllObjects];
+//                [self.videoArray addObjectsFromArray:results];
+//            });
+            
+        });
+    }
+    
+   
+
 }
 
 - (void)clearDataSource {
     [self.tabvlew removeFromSuperview];
     self.tabvlew = nil;
-    [self.originFileArray removeAllObjects];
+
     [self.dataSource removeAllObjects];
 }
 - (void)loadDataWithRecentTimeSendFileMode {
     [self clearDataSource];
     [self.departmentView replaceDeparmentTitleArrWithNewArr:self.depatmentArray];
-    [self loadData];
+//    [self loadData];
+    self.dataSource = self.originFileArray.mutableCopy;
     [self tabvlew];
 }
 
@@ -82,6 +171,7 @@ CGFloat toolBarHeight = 49;
 
 - (void)setMode:(SelectFileMode)mode {
     _mode = mode;
+    _departmentView.selectMode = mode;
     if (_mode == RecentTimeSendFileMode) {
         [self loadDataWithRecentTimeSendFileMode];
     }else if (_mode == LocalFileMode) {
@@ -192,6 +282,8 @@ CGFloat toolBarHeight = 49;
         CJFileObjModel *object = [[CJFileObjModel alloc] initWithFilePath: [NSString stringWithFormat:@"%@/%@",HomeFilePath, str]];
         [self.originFileArray addObject: object];
     }
+//    self.recentTimeSource = self.originFileArray.mutableCopy;
+//    self.dataSource = self.recentTimeSource;
     self.dataSource = self.originFileArray.mutableCopy;
     [self.tabvlew reloadData];
 }
@@ -260,6 +352,75 @@ CGFloat toolBarHeight = 49;
     [self.navigationController pushViewController:vc animated:YES];
 }
 
+
+#pragma mark -  SEARCH -> Action
+//获得其他文件
+- (void)searchUnkownFileForPath{
+    [self.dataSource removeAllObjects];
+    for (CJFileObjModel * model in self.originFileArray) {
+        if (model.fileType == MKFileTypeUnknown) {
+            [self.dataSource addObject:model];
+        }
+    }
+    [self.tabvlew reloadData];
+}
+
+//获得应用
+- (void)searchAPPForPath {
+    [self.dataSource removeAllObjects];
+    for (CJFileObjModel * model in self.originFileArray) {
+        if (model.fileType == MKFileTypeApplication) {
+            [self.dataSource addObject:model];
+        }
+    }
+    [self.tabvlew reloadData];
+}
+
+//获得MP3
+- (void)searchMP3ForPath {
+    [self.dataSource removeAllObjects];
+    for (CJFileObjModel * model in self.originFileArray) {
+        if (model.fileType == MKFileTypeAudioVidio) {
+            [self.dataSource addObject:model];
+        }
+    }
+    [self.tabvlew reloadData];
+}
+
+//获得文档
+- (void)searchDocumentsForPath {
+    [self.dataSource removeAllObjects];
+    for (CJFileObjModel * model in self.originFileArray) {
+        if (model.fileType == MKFileTypeTxt) {
+            [self.dataSource addObject:model];
+        }
+    }
+    [self.tabvlew reloadData];
+}
+
+//获取视频
+- (void)searchVideoForPhoto {
+    [self.dataSource removeAllObjects];
+    
+    NSArray *results =[self.videoArray sortedArrayUsingComparator:^NSComparisonResult(id  _Nonnull obj1, id  _Nonnull obj2) {
+        CJFileObjModel *model1 = obj1;
+        CJFileObjModel *model2 = obj2;
+        NSComparisonResult result = [model1.creatTime compare:model2.creatTime];
+        return result == NSOrderedAscending;
+    }];
+    [self.videoArray removeAllObjects];
+    [self.videoArray addObjectsFromArray:results];
+    
+    [self.dataSource addObjectsFromArray:self.videoArray];
+    [self.tabvlew reloadData];
+}
+
+//获取图片
+- (void)searchPictureForPhoto {
+    
+}
+
+
 #pragma mark --CJDepartmentViewDelegate
 //根据点击进行数据过滤
 - (void)didScrollToIndex:(NSInteger)index withSelectMode:(NSInteger)selectMode{
@@ -275,7 +436,7 @@ CGFloat toolBarHeight = 49;
                     }];
                     [self.tabvlew reloadData];
                 }else {
-                    
+                    [self searchDocumentsForPath];
                 }
             }
                 break;
@@ -283,16 +444,11 @@ CGFloat toolBarHeight = 49;
             {
                 if (selectMode == RecentTimeSendFileMode) {
                     NSLog(@"btn.tag%zd",index);
-                    [self.dataSource removeAllObjects];
-                    for (CJFileObjModel * model in self.originFileArray) {
-                        if (model.fileType == MKFileTypeAudioVidio) {
-                            [self.dataSource addObject:model];
-                        }
-                    }
-                    [self.tabvlew reloadData];
+                    [self searchMP3ForPath];
                     
                 }else {
-                
+                    //获取视频
+                    [self searchVideoForPhoto];
                 }
                 
             }
@@ -301,58 +457,40 @@ CGFloat toolBarHeight = 49;
             {
                 if (selectMode == RecentTimeSendFileMode) {
                     NSLog(@"btn.tag%zd",index);
-                    [self.dataSource removeAllObjects];
-                    for (CJFileObjModel * model in self.originFileArray) {
-                        if (model.fileType == MKFileTypeTxt) {
-                            [self.dataSource addObject:model];
-                        }
-                    }
-                    [self.tabvlew reloadData];
+                    [self searchDocumentsForPath];
                 }else {
-                
+                    [self searchPictureForPhoto];
                 }
-                
             }
                 break;
             case 3:
             {
                 if (selectMode == RecentTimeSendFileMode) {
                     NSLog(@"btn.tag%zd",index);
-                    [self.dataSource removeAllObjects];
-                    for (CJFileObjModel * model in self.originFileArray) {
-                        if (model.fileType == MKFileTypeApplication) {
-                            [self.dataSource addObject:model];
-                        }
-                    }
-                    [self.tabvlew reloadData];
+                    [self searchAPPForPath];
                 }else {
-                
+                    [self searchMP3ForPath];
                 }
-               
             }
                 break;
             case 4:
             {
                 if (selectMode == RecentTimeSendFileMode) {
                     NSLog(@"btn.tag%zd",index);
-                    [self.dataSource removeAllObjects];
-                    for (CJFileObjModel * model in self.originFileArray) {
-                        if (model.fileType == MKFileTypeUnknown) {
-                            [self.dataSource addObject:model];
-                        }
-                    }
-                    [self.tabvlew reloadData];
+                    [self searchUnkownFileForPath];
                 }else {
-                    
+                    [self searchUnkownFileForPath];
                 }
-                
-                
-            }break;
+            }
+                break;
             default:
                 NSLog(@"btn.tag%zd",index);
                 break;
         }
 }
+
+
+
 //将已经记录选中的文件，保存
 - (void)setOrigArray{
     for (CJFileObjModel *model  in self.selectedItems) {
