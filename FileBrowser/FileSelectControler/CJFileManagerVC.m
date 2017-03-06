@@ -7,6 +7,9 @@
 //
 #import <Photos/Photos.h>
 
+static NSInteger MAXSelect = 5;
+static NSInteger MAXFILESIZE = 5000000;
+
 //文件默认存储的路径
 #define HomeFilePath [[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:@"CJFileCache1"]
 
@@ -317,8 +320,12 @@ CGFloat toolBarHeight = 49;
     CJFileObjModel *actualFile = [_dataSource objectAtIndex:indexPath.row];
     cell.model = actualFile;
     __weak typeof(self) weakSelf = self;
+    /*
+     cell☑️回调
+     */
+    
     cell.Clickblock = ^(CJFileObjModel *model,UIButton *btn){
-        if (weakSelf.selectedItems.count>=5 && btn.selected) {
+        if (weakSelf.selectedItems.count>= MAXSelect && btn.selected) {
             btn.selected =  NO;
             model.select = btn.selected;
             [weakSelf.view makeToast:@"最多支持5个文件选择" duration:0.5 position:CSToastPositionCenter];
@@ -526,7 +533,7 @@ CGFloat toolBarHeight = 49;
 }
 - (BOOL )checkFileSize:(CJFileObjModel *)model
 {
-    if (model.fileSizefloat >= 5000000) {
+    if (model.fileSizefloat >= MAXFILESIZE) {
         return NO;
     }
     return YES;
