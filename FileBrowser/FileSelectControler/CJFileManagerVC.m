@@ -51,9 +51,17 @@ CGFloat toolBarHeight = 49;
 
 @property (nonatomic,strong) NSMutableArray *videoArray;
 
+@property (nonatomic,strong) NSMutableArray *albumPic;
+
 @end
 
 @implementation CJFileManagerVC
+
+- (NSMutableArray *)albumPic {
+    if (!_albumPic) {
+        _albumPic = [NSMutableArray array];
+    }return _albumPic;
+}
 
 - (NSMutableArray *)recentTimeSource {
     if (!_recentTimeSource ) {
@@ -82,8 +90,82 @@ CGFloat toolBarHeight = 49;
     
     [self loadData];
     [self loadVideo];
+    [self loadPicture];
     [self setClickPartmentView];
     [self setupToolbar];
+}
+
+- (void)loadPicture {
+    PHAuthorizationStatus author = [PHPhotoLibrary authorizationStatus];
+    if (author == PHAuthorizationStatusRestricted || author ==PHAuthorizationStatusDenied) {
+        //无权限
+        
+    }else {
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+           
+            
+            PHFetchOptions *option = [PHFetchOptions new];
+            option.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:NO]];
+            //根据图片的创建时间升序排列
+            PHFetchResult *imageResult = [PHAsset fetchAssetsWithMediaType:PHAssetMediaTypeImage options:option];
+            
+            PHImageManager *manager = [PHImageManager defaultManager];
+            PHImageRequestOptions *imageOption = [PHImageRequestOptions new];
+            imageOption.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
+            imageOption.resizeMode = PHImageRequestOptionsResizeModeFast;
+            
+            [imageResult enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                //多一层判断,容错处理
+                if (((PHAsset *)obj).mediaType == PHAssetMediaTypeImage) {
+                    PHAsset *asset = obj;
+                    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+                    [dateFormatter setDateFormat:@"YY-MM-dd HH:mm:ss"];
+                    CJFileObjModel *model = [CJFileObjModel new];
+                    model.creatTime = [dateFormatter stringFromDate:asset.creationDate];
+                    
+                    [manager requestImageForAsset:asset targetSize:CGSizeMake(70, 70) contentMode:PHImageContentModeAspectFill options:imageOption resultHandler:^(UIImage * _Nullable result, NSDictionary * _Nullable info) {
+                        model.name = [NSString stringWithFormat:@"%@.png",@(asset.creationDate.timeIntervalSince1970 * 1000)];
+                        model.image = result;
+//                        model.fileSize = 
+                        model.fileData = UIImageJPEGRepresentation(result,0.5);
+                        [self.albumPic addObject:model];
+
+                    }];
+                }
+            }];
+//            PHAsset *
+            
+//            [manager requestImageForAsset:<#(nonnull PHAsset *)#> targetSize:<#(CGSize)#> contentMode:<#(PHImageContentMode)#> options:<#(nullable PHImageRequestOptions *)#> resultHandler:<#^(UIImage * _Nullable result, NSDictionary * _Nullable info)resultHandler#>]
+            
+//            [libary enumerateGroupsWithTypes:ALAssetsGroupAll usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
+//                //便利完成了
+//                if(group == nil) {
+//                    *stop = YES;
+//                } else {
+//                    [group enumerateAssetsUsingBlock:^(ALAsset *result, NSUInteger index, BOOL *stop) {
+//                        if (result == nil && index == NSNotFound) {
+//                            dispatch_async(dispatch_get_main_queue(), ^{
+////                                [_tableView reloadData];
+//                                *stop = YES;
+//                            });
+//                        } else {
+//                            NSString *type = [result valueForProperty:ALAssetPropertyType];
+//                            if([type isEqualToString:ALAssetTypePhoto]) {
+////                                Attachment *attachment = [Attachment new];
+//                                CJFileObjModel *model = [CJFileObjModel new];
+//                                model.fileData = UIImageJPEGRepresentation([UIImage imageWithCGImage:(result.aspectRatioThumbnail)],0.5);
+//                                model.name = [NSString stringWithFormat:@"%@.png",@([NSDate date].timeIntervalSince1970 * 1000)];
+//                                [self.albumPic addObject:model];
+//                            }
+//                        }
+//                    }];
+//                }
+//            } failureBlock:^(NSError *error) {
+//                
+//            }];
+            
+        });
+    }
 }
 
 - (void)loadVideo {
@@ -424,7 +506,9 @@ CGFloat toolBarHeight = 49;
 
 //获取图片
 - (void)searchPictureForPhoto {
-    
+    [self.dataSource removeAllObjects];
+    [self.dataSource addObjectsFromArray:self.albumPic];
+    [self.tabvlew reloadData];
 }
 
 
