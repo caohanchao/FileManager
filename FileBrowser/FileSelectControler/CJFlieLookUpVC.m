@@ -38,7 +38,7 @@
     self.title = (@"文件详情");
     NSFileManager *manger = [NSFileManager defaultManager];
     __weak typeof(self) weakSelf = self;
-    if (_actualmodel.filePath && [manger fileExistsAtPath:_actualmodel.filePath]) {
+    if ((_actualmodel.filePath && [manger fileExistsAtPath:_actualmodel.filePath]) || (_actualmodel.fileUrl && [manger fileExistsAtPath:_actualmodel.fileUrl])) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             //使用系统自带工具打开
             [weakSelf loadData];
@@ -46,6 +46,7 @@
     }else{
         //显示下载文件视图
         [self showDownloadFile];
+//        [weakSelf loadData1];
     }
    
 
@@ -55,6 +56,21 @@
     [super viewDidAppear:animated];
 
 }
+
+//- (void)loadData1 {
+//    _documentInteraction = [UIDocumentInteractionController interactionControllerWithURL:[NSURL fileURLWithPath:_actualmodel.fileUrl]];
+//    _documentInteraction.delegate = self;
+//    //    _documentInteraction.UTI = @"com.microsoft.ico";
+//    if(![_documentInteraction presentPreviewAnimated:NO]){
+//        [self openfileView];
+//        __weak CJFlieLookUpVC *weakself = self;
+//        _openfileView.Clickblock = ^(CJFileObjModel *model){
+//            [weakself.documentInteraction presentOpenInMenuFromRect:CGRectMake(0, weakself.view.height - 500, 100, 100)
+//                                                             inView:weakself.view
+//                                                           animated:YES];
+//        };
+//    }
+//}
 
 - (void)loadData{
         _documentInteraction = [UIDocumentInteractionController interactionControllerWithURL:[NSURL fileURLWithPath:_actualmodel.filePath]];

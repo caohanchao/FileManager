@@ -105,10 +105,10 @@
         }
         if (lastSelectedItem == self.selectedItems.count) {
             //                NSString *bytes = nil;
-            if (dataLength >= 0.1 * (1000 * 1000)) {
-                bytes = [NSString stringWithFormat:@"%0.1fM",dataLength/1000/1000.0];
-            } else if (dataLength >= 1000) {
-                bytes = [NSString stringWithFormat:@"%0.0fK",dataLength/1000.0];
+            if (dataLength >= 0.1 * (1024 * 1024)) {
+                bytes = [NSString stringWithFormat:@"%0.1fM",dataLength/1024/1024.0];
+            } else if (dataLength >= 1024) {
+                bytes = [NSString stringWithFormat:@"%0.0fK",dataLength/1024.0];
             } else {
                 bytes = [NSString stringWithFormat:@"%zdB",dataLength];
             }

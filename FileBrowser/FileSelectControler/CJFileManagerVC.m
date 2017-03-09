@@ -103,16 +103,13 @@ CGFloat toolBarHeight = 49;
     }else {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
            
-            
             PHFetchOptions *option = [PHFetchOptions new];
             option.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:NO]];
             //根据图片的创建时间升序排列
             PHFetchResult *imageResult = [PHAsset fetchAssetsWithMediaType:PHAssetMediaTypeImage options:option];
             
             PHImageManager *manager = [PHImageManager defaultManager];
-            PHImageRequestOptions *imageOption = [PHImageRequestOptions new];
-            imageOption.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
-            imageOption.resizeMode = PHImageRequestOptionsResizeModeFast;
+            
             
             [imageResult enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
                 //多一层判断,容错处理
@@ -123,49 +120,66 @@ CGFloat toolBarHeight = 49;
                     CJFileObjModel *model = [CJFileObjModel new];
                     model.creatTime = [dateFormatter stringFromDate:asset.creationDate];
                     
-                    [manager requestImageForAsset:asset targetSize:CGSizeMake(70, 70) contentMode:PHImageContentModeAspectFill options:imageOption resultHandler:^(UIImage * _Nullable result, NSDictionary * _Nullable info) {
-                        model.name = [NSString stringWithFormat:@"%@.png",@(asset.creationDate.timeIntervalSince1970 * 1000)];
-                        model.image = result;
-//                        model.fileSize = 
-                        model.fileData = UIImageJPEGRepresentation(result,0.5);
-                        [self.albumPic addObject:model];
+                    //请求图片
+                    PHImageRequestOptions *imageOption = [PHImageRequestOptions new];
+                    imageOption.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
+                    imageOption.resizeMode = PHImageRequestOptionsResizeModeFast;
+                    
+                    PHImageRequestID imageRequestID =[manager requestImageForAsset:asset targetSize:CGSizeMake(70, 70) contentMode:PHImageContentModeAspectFill options:imageOption resultHandler:^(UIImage * _Nullable result, NSDictionary * _Nullable info) {
+                    
+                        BOOL downloadFinined = (![[info objectForKey:PHImageCancelledKey] boolValue] && ![info objectForKey:PHImageErrorKey]);
+                        if (downloadFinined && result) {
+                            model.name = [NSString stringWithFormat:@"%ld.png",@(asset.creationDate.timeIntervalSince1970 * 1000).integerValue];
+                            model.image = result;
+                            model.fileData = UIImageJPEGRepresentation(result,0.5);
+                            
+                            //准确获取原图大小
+                            [manager requestImageDataForAsset:asset options:imageOption resultHandler:^(NSData * _Nullable imageData, NSString * _Nullable dataUTI, UIImageOrientation orientation, NSDictionary * _Nullable info) {
+                                BOOL downloadFinined = (![[info objectForKey:PHImageCancelledKey] boolValue] && ![info objectForKey:PHImageErrorKey]);
+                                if (downloadFinined && imageData) {
+                                    
 
+//                                    model.fileData = imageData;
+                                    model.fileSizefloat = imageData.length;
+                                    model.fileSize = [self getBytesFromDataLength:model.fileSizefloat];
+                                    [self.albumPic addObject:model];
+                                }
+                                
+                            }];
+
+                        }
                     }];
+                    
                 }
             }];
-//            PHAsset *
-            
-//            [manager requestImageForAsset:<#(nonnull PHAsset *)#> targetSize:<#(CGSize)#> contentMode:<#(PHImageContentMode)#> options:<#(nullable PHImageRequestOptions *)#> resultHandler:<#^(UIImage * _Nullable result, NSDictionary * _Nullable info)resultHandler#>]
-            
-//            [libary enumerateGroupsWithTypes:ALAssetsGroupAll usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
-//                //便利完成了
-//                if(group == nil) {
-//                    *stop = YES;
-//                } else {
-//                    [group enumerateAssetsUsingBlock:^(ALAsset *result, NSUInteger index, BOOL *stop) {
-//                        if (result == nil && index == NSNotFound) {
-//                            dispatch_async(dispatch_get_main_queue(), ^{
-////                                [_tableView reloadData];
-//                                *stop = YES;
-//                            });
-//                        } else {
-//                            NSString *type = [result valueForProperty:ALAssetPropertyType];
-//                            if([type isEqualToString:ALAssetTypePhoto]) {
-////                                Attachment *attachment = [Attachment new];
-//                                CJFileObjModel *model = [CJFileObjModel new];
-//                                model.fileData = UIImageJPEGRepresentation([UIImage imageWithCGImage:(result.aspectRatioThumbnail)],0.5);
-//                                model.name = [NSString stringWithFormat:@"%@.png",@([NSDate date].timeIntervalSince1970 * 1000)];
-//                                [self.albumPic addObject:model];
-//                            }
-//                        }
-//                    }];
-//                }
-//            } failureBlock:^(NSError *error) {
-//                
-//            }];
+
             
         });
     }
+}
+
+- (UIImage *)scaleImage:(UIImage *)image toSize:(CGSize)size {
+    if (image.size.width > size.width) {
+        UIGraphicsBeginImageContext(size);
+        [image drawInRect:CGRectMake(0, 0, size.width, size.height)];
+        UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+        return newImage;
+    } else {
+        return image;
+    }
+}
+
+- (NSString *)getBytesFromDataLength:(NSInteger)dataLength {
+    NSString *bytes;
+    if (dataLength >= 0.1 * (1024 * 1024)) {
+        bytes = [NSString stringWithFormat:@"%0.1fM",dataLength/1024/1024.0];
+    } else if (dataLength >= 1024) {
+        bytes = [NSString stringWithFormat:@"%0.0fK",dataLength/1024.0];
+    } else {
+        bytes = [NSString stringWithFormat:@"%zdB",dataLength];
+    }
+    return bytes;
 }
 
 - (void)loadVideo {
@@ -179,7 +193,9 @@ CGFloat toolBarHeight = 49;
         
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
             //这里用PHAsset来获取视频数据 ALAsset显得很无力了。。。
-            PHFetchResult *voideResult = [PHAsset fetchAssetsWithMediaType:PHAssetMediaTypeVideo options:nil];
+            PHFetchOptions *option = [PHFetchOptions new];
+            option.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:NO]];
+            PHFetchResult *voideResult = [PHAsset fetchAssetsWithMediaType:PHAssetMediaTypeVideo options:option];
             PHImageManager *manager = [PHImageManager defaultManager];
             // 视频请求对象
             PHVideoRequestOptions *options = [PHVideoRequestOptions new];
@@ -203,15 +219,19 @@ CGFloat toolBarHeight = 49;
                         model.fileSizefloat += seconds * rate;
                     }
                     
-                    model.fileSize = [NSString stringWithFormat:@"%.2lfM",model.fileSizefloat / 1000 / 1000];
+                    AVURLAsset *urlAsset = (AVURLAsset *)asset;
+
                     
+                    model.fileSize = [NSString stringWithFormat:@"%.2lfM",model.fileSizefloat / 1024 / 1024];
+//                    model.fileUrl = [asset mj_keyValues][@"cacheKey"];
+                    model.fileUrl =  [urlAsset.URL absoluteString];
                     model.name = [asset mj_keyValues][@"propertyListForProxy"][@"name"];
+                    
                     //                model.fileSize = [[asset mj_keyValues][@"propertyListForProxy"][@"moop"] length];
                     model.fileData = [asset mj_keyValues][@"propertyListForProxy"][@"moop"];
+//                    model.fileData = [NSData dataWithContentsOfURL:urlAsset.URL];
                     [self.videoArray addObject:model];
                 }];
-                
-                
                 
             }];
             
@@ -541,7 +561,6 @@ CGFloat toolBarHeight = 49;
                     //获取视频
                     [self searchVideoForPhoto];
                 }
-                
             }
                 break;
             case 2:

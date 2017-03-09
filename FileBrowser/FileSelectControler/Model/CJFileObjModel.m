@@ -33,6 +33,7 @@ static const NSString *IMAGES_TYPES[IMAGES_TYPES_COUNT] = {@"png", @"PNG", @"jpg
 
 -(void)setFilePath:(NSString *)filePath {
     _filePath = filePath;
+    _fileUrl = _filePath;
     
     self.name = [filePath lastPathComponent];
     
